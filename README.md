@@ -1,1 +1,1 @@
-# aylay-server
+# aylay
