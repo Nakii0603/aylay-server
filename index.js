@@ -1,61 +1,53 @@
-// app.js or server.js
-
 import express from "express";
-import session from "express-session";
-import dotenv from "dotenv";
 import cors from "cors";
-import authRoutes from "./routes/userRoutes.js";
-import shopRoutes from "./routes/shopRouter.js";
-import productRouter from "./routes/productRouter.js"
-import contactRoutes from "./routes/contactRoutes.js";
-import otpRoutes from "./routes/otpRoutes.js";
-import { connectDatabase } from "./db/db.js";
+import dotenv from "dotenv";
+import OpenAI from "openai";
 
 dotenv.config();
 
 const app = express();
+const port = process.env.PORT || 8000;
 
-const allowedOrigins = [process.env.NEXT_PUBLIC_API_URL_CLIENT].filter(Boolean);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  })
-);
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { httpOnly: true, secure: false },
-  })
-);
-
-app.options("*", cors());
+app.use(cors());
 app.use(express.json());
 
-connectDatabase();
-
-app.use("/api/product", productRouter);
-app.use("/api", contactRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/auth/shop", shopRoutes);
-app.use("/api/otp", otpRoutes);
-
-app.get("/", (req, res) => {
-  res.send("Hello World");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-const PORT = process.env.PORT || 8888;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.post("/api/chat", async (req, res) => {
+  const { message } = req.body;
+
+  if (!message || message.trim() === "") {
+    return res.status(400).json({ reply: "Асуулт хоосон байна." });
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      // model: "gpt-4o-mini",
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: "Та бол монгол хэлээр тусалдаг туслах." },
+        { role: "user", content: message },
+      ],
+      max_tokens: 500,
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ reply });
+  } catch (error) {
+    console.error("GPT алдаа:", error.message);
+
+    if (error.status === 429) {
+      return res.status(429).json({
+        reply: "API квот хэтэрсэн тул хязгаарлагдлаа. Дараа дахин оролдоно уу.",
+      });
+    }
+
+    res.status(500).json({ reply: "GPT-ээс хариу авч чадсангүй." });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server ажиллаж байна: http://localhost:${port}`);
 });
