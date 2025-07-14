@@ -8,10 +8,12 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 8000;
 
-app.use(cors({
-  origin: ["http://localhost:3000", "https://www.aylay.mn"],
-  methods: ["GET", "POST"],
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://www.aylay.mn"],
+    methods: ["GET", "POST"],
+  })
+);
 
 app.use(express.json());
 
@@ -28,10 +30,13 @@ app.post("/api/chat", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      // model: "gpt-4o-mini",
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
-        { role: "system", content: "Та бол монгол хэлээр тусалдаг туслах." },
+        {
+          role: "system",
+          content:
+            "Та бол аялал жуулчлалын мэргэжилтэн бөгөөд хэрэглэгчид Монгол орны аяллын маршрут, тээвэр, зочид буудал, цаг агаарын талаар зөвлөгөө өгдөг AI туслах юм.",
+        },
         { role: "user", content: message },
       ],
       max_tokens: 500,
