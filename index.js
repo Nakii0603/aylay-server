@@ -20,6 +20,40 @@ app.use(express.json());
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+app.post("/api/chatMessage", async (req, res) => {
+  const { message } = req.body;
+
+  if (!message || message.trim() === "") {
+    return res.status(400).json({ reply: "Асуулт хоосон байна." });
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `Та зөвхөн монгол хэл дээр хариулдаг бөгөөд аяллын туршлагатай хүн юм, Таны нэрийн aylay апп туслах хиймэл оюун ухаан юм. `,
+        },
+        { role: "user", content: message },
+      ],
+      max_tokens: 2000,
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ reply });
+  } catch (error) {
+    console.error("Aylay алдаа:", error.message);
+
+    if (error.status === 429) {
+      return res.status(429).json({
+        reply: "API квот хэтэрсэн тул хязгаарлагдлаа. Дараа дахин оролдоно уу.",
+      });
+    }
+
+    res.status(500).json({ reply: "Aylay-ээс хариу авч чадсангүй." });
+  }
+});
 
 app.post("/api/chat", async (req, res) => {
   const { message } = req.body;
@@ -77,7 +111,7 @@ app.post("/api/chat", async (req, res) => {
     const reply = completion.choices[0].message.content;
     res.json({ reply });
   } catch (error) {
-    console.error("GPT алдаа:", error.message);
+    console.error("Aylay алдаа:", error.message);
 
     if (error.status === 429) {
       return res.status(429).json({
@@ -85,7 +119,7 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    res.status(500).json({ reply: "GPT-ээс хариу авч чадсангүй." });
+    res.status(500).json({ reply: "Aylay-ээс хариу авч чадсангүй." });
   }
 });
 
